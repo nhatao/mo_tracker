@@ -1,0 +1,174 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{3A138F82-D940-40A3-B3EF-C19522D9301E}</ProjectGuid>
+    <RootNamespace>nhlib</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectName>MOTrackerLib</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="opencv.props" />
+    <Import Project="boost.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="opencv.props" />
+    <Import Project="boost.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Intermediate\$(ProjectName)\$(Configuration)\</IntDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Intermediate\$(ProjectName)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>../include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_ITERATOR_DEBUG_LEVEL=2;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <PrecompiledHeaderFile>StdAfx_MOTracking.h</PrecompiledHeaderFile>
+      <DisableSpecificWarnings>4819;4996</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <AdditionalIncludeDirectories>../include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_ITERATOR_DEBUG_LEVEL=0;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
+      <PrecompiledHeaderFile>StdAfx_MOTracking.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <DisableSpecificWarnings>4819;4996</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="CascadedCoords.cpp" />
+    <ClCompile Include="CascadedVec.cpp" />
+    <ClCompile Include="ColorCout.cpp" />
+    <ClCompile Include="Coordinates.cpp" />
+    <ClCompile Include="LMS100Source.cpp" />
+    <ClCompile Include="LRFSensor.cpp" />
+    <ClCompile Include="LRFSource.cpp" />
+    <ClCompile Include="MatrixFuncs.cpp" />
+    <ClCompile Include="mmtimer.cpp" />
+    <ClCompile Include="MOTracker.cpp" />
+    <ClCompile Include="MOTrackerFramework.cpp" />
+    <ClCompile Include="MovingObject.cpp" />
+    <ClCompile Include="NHSensorFromFile.cpp" />
+    <ClCompile Include="NHSensorManager.cpp" />
+    <ClCompile Include="NHUtil.cpp" />
+    <ClCompile Include="observer.cpp" />
+    <ClCompile Include="PolarVec.cpp" />
+    <ClCompile Include="PolygonalRegion.cpp" />
+    <ClCompile Include="SensorManagerGrabber.cpp" />
+    <ClCompile Include="SerialControlWin.cpp" />
+    <ClCompile Include="SocketWin.cpp" />
+    <ClCompile Include="StdAfxLib.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="TrackerConfig.cpp" />
+    <ClCompile Include="TrackerLogger.cpp" />
+    <ClCompile Include="URGSource.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\Angle.h" />
+    <ClInclude Include="..\include\AppProperties.h" />
+    <ClInclude Include="..\include\CascadedCoords.h" />
+    <ClInclude Include="..\include\CascadedVec.h" />
+    <ClInclude Include="..\include\CDigitizedSpace.h" />
+    <ClInclude Include="..\include\CLine.h" />
+    <ClInclude Include="..\include\ColorCout.h" />
+    <ClInclude Include="..\include\Coordinates.h" />
+    <ClInclude Include="..\include\FastMath.h" />
+    <ClInclude Include="..\include\fmath.hpp" />
+    <ClInclude Include="..\include\GridSpace.h" />
+    <ClInclude Include="..\include\KDTree.h" />
+    <ClInclude Include="..\include\LaserData.h" />
+    <ClInclude Include="..\include\LibSVM.h" />
+    <ClInclude Include="..\include\LMS100Source.h" />
+    <ClInclude Include="..\include\LRFSensor.h" />
+    <ClInclude Include="..\include\LRFSource.h" />
+    <ClInclude Include="..\include\MatrixFuncs.h" />
+    <ClInclude Include="..\include\MatrixUtils.h" />
+    <ClInclude Include="..\include\mmtimer.h" />
+    <ClInclude Include="..\include\MOTracker.h" />
+    <ClInclude Include="..\include\MOTrackerFramework.h" />
+    <ClInclude Include="..\include\MovingObject.h" />
+    <ClInclude Include="..\include\mt_ofstream.h" />
+    <ClInclude Include="..\include\NHSensorFromFile.h" />
+    <ClInclude Include="..\include\NHSensorManager.h" />
+    <ClInclude Include="..\include\NHUtil.h" />
+    <ClInclude Include="..\include\observer.h" />
+    <ClInclude Include="..\include\Odometry.h" />
+    <ClInclude Include="..\include\OutputDebugStream.h" />
+    <ClInclude Include="..\include\ParticleFilter.h" />
+    <ClInclude Include="..\include\PolarVec.h" />
+    <ClInclude Include="..\include\PolygonalRegion.h" />
+    <ClInclude Include="..\include\PropertiedObject.h" />
+    <ClInclude Include="..\include\RequestQueue.h" />
+    <ClInclude Include="..\include\SensorManagerGrabber.h" />
+    <ClInclude Include="..\include\SerialControl.h" />
+    <ClInclude Include="..\include\SJPDATrackerConfig.h" />
+    <ClInclude Include="..\include\SobolQuasiRandom.h" />
+    <ClInclude Include="..\include\Socket.h" />
+    <ClInclude Include="..\include\SocketWin.h" />
+    <ClInclude Include="..\include\StdAfx_MOTracking.h" />
+    <ClInclude Include="..\include\StreamException.h" />
+    <ClInclude Include="..\include\svm.h" />
+    <ClInclude Include="..\include\TrackerConfig.h" />
+    <ClInclude Include="..\include\TrackerLogger.h" />
+    <ClInclude Include="..\include\URGSource.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

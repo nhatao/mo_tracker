@@ -1,0 +1,13 @@
+  <launch>
+    <param name="/hokuyo/max_ang" value="2.356194496154785" type="double"/>
+    <param name="/hokuyo/min_ang" value="-2.356194496154785" type="double"/>
+    <param name="/hokuyo/frame_id" value="/laser" type="string"/>
+    <node pkg="hokuyo_node" type="hokuyo_node" name="hokuyo" />
+    <node pkg="tf" type="static_transform_publisher"
+       args="0 0 0 0 0 0 /map /base_link 10" name="tf1" />
+    <node pkg="tf" type="static_transform_publisher"
+       args="0 0 0 0 0 0 /base_link /laser 10" name="tf2" />
+    <node pkg="mo_tracker" type="mo_tracker_node" args="-f $(find mo_tracker)/src/config/ini/urg_no_background.ini" name="mo_tracker" />
+    <node pkg="mo_tracker" type="tracker_convertor" name="tracker_convertor" />
+  </launch>
+

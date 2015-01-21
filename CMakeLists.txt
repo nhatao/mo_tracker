@@ -1,20 +1,18 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(mo_tracker)
 
-SET(CMAKE_CXX_FLAGS "-std=c++0x -fomit-frame-pointer -fno-operator-names -march=core2 -mssse3 -mfpmath=sse -ffast-math -fexcess-precision=fast -msse2 -fno-strict-aliasing")
+set(CMAKE_CXX_FLAGS "-std=c++11 -fomit-frame-pointer -fno-operator-names -march=native -mssse3 -msse2 -mfpmath=sse -fexcess-precision=fast -fno-strict-aliasing")
 
-IF(NOT CMAKE_BUILD_TYPE)
-MESSAGE ("Build Type not specified! Use command \"catkin_make -DCMAKE_BUILD_TYPE=Release\". ")
-ENDIF(NOT CMAKE_BUILD_TYPE)
-IF(CMAKE_BUILD_TYPE)
-MESSAGE ("Build Type = ${CMAKE_BUILD_TYPE}")
-ENDIF(CMAKE_BUILD_TYPE)
+if(CMAKE_BUILD_TYPE)
+  message("Build Type = ${CMAKE_BUILD_TYPE}")
+else(CMAKE_BUILD_TYPE)
+  message("Build Type not specified! Use command \"catkin_make -DCMAKE_BUILD_TYPE=Release\". ")
+endif(CMAKE_BUILD_TYPE)
 
 find_package(Boost REQUIRED COMPONENTS thread date_time filesystem program_options)
 find_package(catkin REQUIRED COMPONENTS roscpp std_msgs geometry_msgs message_generation tf)
-find_package(PkgConfig)
+find_package(PkgConfig REQUIRED)
 find_package(OpenCV REQUIRED)
-set(FLTKDIR /usr/local/include)
 
 add_message_files(
   FILES
@@ -25,9 +23,24 @@ add_message_files(
 )
 generate_messages(DEPENDENCIES std_msgs geometry_msgs)
         
+if (DEFINED ENV{FLTKDIR})
+  message("FLTKDIR = $ENV{FLTKDIR}")
+  set(FLTKDIR $ENV{FLTKDIR})
+else (DEFINED ENV{FLTKDIR})
+  message("FLTKDIR is not specified. Using installed path.")
+  set(FLTKDIR /usr/local/include)
+endif (DEFINED ENV{FLTKDIR})
+
 include_directories(include ${Boost_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS} ${FLTKDIR} )
 link_directories(${FLTKDIR}/lib)
 set(FLTK_LIBRARIES fltk2 Xi Xext X11 Xft Xinerama Xrender fontconfig)
+
+catkin_package(
+  INCLUDE_DIRS include 
+  LIBRARIES mo_tracker
+  CATKIN_DEPENDS roscpp std_msgs geometry_msgs message_runtime tf
+  DEPENDS ${FLTK_LIBRARIES}
+)
 
 add_library(mo_tracker STATIC
   src/CascadedCoords.cpp 
@@ -87,12 +100,6 @@ add_executable(obstacle_box_array_visualizer src/obstacle_box_array_visualizer.c
 target_link_libraries(obstacle_box_array_visualizer ${catkin_LIBRARIES})
 add_dependencies(obstacle_box_array_visualizer mo_tracker_generate_messages_cpp)
 
-catkin_package(
-  INCLUDE_DIRS include 
-  LIBRARIES mo_tracker
-  CATKIN_DEPENDS roscpp std_msgs geometry_msgs message_runtime tf
-  DEPENDS ${FLTK_LIBRARIES}
-)
 
 #############
 ## Install ##

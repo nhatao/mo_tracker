@@ -39,10 +39,6 @@ CFLTKPresenter::~CFLTKPresenter(void) {
 void CFLTKPresenter::MakeGridViewer(boost::shared_ptr<const CTrackInitializationWithProperty>  _pInitializer) {
 
   if ((!_vpGridViewers.empty()) || (!_FirstConfig._bDrawGrid)) return;
-
-  ccout->SetColor(ColorCout::eGreen);
-  ccout << "DrawGrid: " << std::boolalpha << _FirstConfig._bDrawGrid << endl;
-
   if (_FirstConfig._bDrawGrid) {
     int _nID = 0;
 
@@ -70,9 +66,6 @@ void CFLTKPresenter::MakeGridViewer(boost::shared_ptr<const CTrackInitialization
       pGridViewer->show();
       pGridViewer->redraw();
       _vpGridViewers.push_back(pGridViewer);
-
-    }
-    else {
 
     }
   }
@@ -827,7 +820,6 @@ CFLTKWindowView::~CFLTKWindowView() {
 
 int CFLTKWindowView::handle(int nEvent) {
 
-
   int nX = fltk::event_x();
   int nY = fltk::event_y();
   bool b1 = fltk::event_state(fltk::BUTTON1);
@@ -866,8 +858,6 @@ int CFLTKWindowView::handle(int nEvent) {
     default:
       break;
   }
-
-
   return fltk::Window::handle(nEvent);
 }
 
@@ -929,9 +919,6 @@ void ResetButtonPushed2(fltk::Button *o, void *p) {
   pWindow->ResetViewerRange();
 }
 
-
-
-
 void CFLTKWindowView::draw() {
 
   using namespace fltk;
@@ -939,11 +926,8 @@ void CFLTKWindowView::draw() {
   fltk::Window::draw();
   IplImage *_pCvImage = _pLRFViewer->GetBufImage();
   fltk::Rectangle Rect(0, 0, _pCvImage->width, _pCvImage->height);
-
-//  fltk::drawimage((const uchar*)_pCvImage->imageData, fltk::BGR, Rect); //BGRは公開版にはない
-  cvCvtColor(_pCvImage, _BufImage, CV_BGR2RGB); //無駄だが1ms程度で終わる気がする
+  cvCvtColor(_pCvImage, _BufImage, CV_BGR2RGB);
   fltk::drawimage((const uchar*)_BufImage->imageData, fltk::RGB, Rect); 
-
   if ((_dCurX != DBL_MAX) || (_dCurY != DBL_MAX)) {
     setcolor(WHITE);
     setfont(labelfont(), labelsize());
@@ -956,9 +940,8 @@ void CFLTKWindowView::draw() {
 
 void CFLTKWindowView::Init() {
   set_vertical();
-//      shortcut(0xff1b);
   begin();
-//      new fltk::ValueSlider(184, 640, 362, 35);
+
   _pSlider =  new fltk::ValueSlider(100, _pLRFViewer->GetHeight()+5, _pLRFViewer->GetWidth()-110, 35);
   _pSlider->range(0.5, 100);
   _pSlider->value(_pLRFViewer->GetWidthLength()/1000.0);
@@ -967,31 +950,25 @@ void CFLTKWindowView::Init() {
   _pResetButton->callback((fltk::Callback*)ResetButtonPushed2, this);
 
   end();
-
   _dOrgXCenter = _pLRFViewer->GetXCenter();
   _dOrgYCenter = _pLRFViewer->GetYCenter();
   _dOrgWidthLength = _pLRFViewer->GetWidthLength();
   _dCurX = DBL_MAX;
   _dCurY = DBL_MAX;
-
   _CurrentState.nState = SDragState::eNothing;
   cvReleaseImage(&_BufImage);
   _BufImage = cvCreateImage(cvSize(_pLRFViewer->GetBufImage()->width,_pLRFViewer->GetBufImage()->height), _pLRFViewer->GetBufImage()->depth, _pLRFViewer->GetBufImage()->nChannels);
-
-
 }
 
 void CFLTKWindowView::SetViewerCenter(double x, double y) {
-  
   _pLRFViewer->SetCenterPos(x,y);
-
 }
+
 void CFLTKWindowView::SaveImage(const std::string &rsFileName) {
   if (!cvSaveImage(rsFileName.c_str(), GetViewer()->GetBufImage())) {
     throw std::logic_error("CFLTKWindowView::SaveImage failed");
   }
 }
-
 
 void ChangeDoutSetting() {
   size_t n=dout.GetMode();
@@ -1009,7 +986,6 @@ void ChangeDoutSetting() {
 #endif
   else cout << endl << "dout set dout.txt" << endl;
 }
-
 
 void CTrackerResultViewModel::KeyPressed(CTrackerResultView* pView, int nKeyCode) {
 
@@ -1122,10 +1098,8 @@ void CTrackerResultViewModel::MouseReleased(CTrackerResultView* pView, bool bBut
 
 }
 
-CPolarGridViewer::CPolarGridViewer(
-    boost::shared_ptr<const CTrackInitializationUsingPolarGrid> pGrid, 
-    const std::string &sWindowName, int nCellSize) 
-    :fltk::DoubleBufferWindow(100,100,"grid1")
+CPolarGridViewer::CPolarGridViewer(boost::shared_ptr<const CTrackInitializationUsingPolarGrid> pGrid, const std::string &sWindowName, int nCellSize) 
+      : fltk::DoubleBufferWindow(100,100,"grid1")
 {
   _pGrid = pGrid;
   _nCellSize = nCellSize;
@@ -1191,9 +1165,7 @@ void CPolarGridViewer::DrawMap() {
       r=180;g=180;b=0;
     }
     else {
-      cout << " muge?" << it->nCellStatus << endl;
     }
-
     fl_rectf(nPosX*_nCellSize, nPosY*_nCellSize, _nCellSize, _nCellSize, r, g, b);
   }
 }

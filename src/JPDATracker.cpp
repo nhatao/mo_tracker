@@ -19,6 +19,7 @@
 #include <boost/multi_array.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/assign.hpp>
+#include <boost/scope_exit.hpp>
 using namespace boost::assign;
 using namespace boost::numeric;
 using namespace boost::posix_time;
@@ -52,6 +53,12 @@ CJPDATracker::CJPDATracker(const SJPDATrackerConfig &rConfig) {
 CJPDATracker::~CJPDATracker(void) {}
 
 void CJPDATracker::Initialize() {
+
+  bool bCriticalError = true;
+  //Initializeに失敗したらプログラム終了
+  BOOST_SCOPE_EXIT((&_bCriticalError)(&bCriticalError)) {
+      _bCriticalError = bCriticalError;
+  } BOOST_SCOPE_EXIT_END
 
   _nLRFPointNum = _pCurrentLaserData->GetProperty()._nElemNum;
 
@@ -87,7 +94,7 @@ void CJPDATracker::Initialize() {
       _pInitializer->LoadBackGroundFromFile(_CurrentConfig._vsLoadGridFileNames.at(0));
     }
   }
-  else if  (_CurrentConfig._nIniterType == 1) {
+  else if  (_CurrentConfig._nIniterType == 2) {
     _pInitializer.reset(new CTrackInitializationPassThrough());
   }
   else {
@@ -135,6 +142,7 @@ void CJPDATracker::Initialize() {
   pClassifier->OpenSVMDirectory(_CurrentConfig._sFeatureDir);
   */
 
+  bCriticalError = false;
 }
 
 
@@ -153,12 +161,10 @@ bool CJPDATracker::PrepareTracking(const LaserDataBuffer &rvLasers) {
     Initialize();
   }
   else {
-
     double dTimeDiff = rvLasers.back().front()->GetTime() - _pCurrentLaserData->GetTime();
     if (dTimeDiff < _CurrentConfig._dFrameUpdateMinTime) {
       return false;
     }
-
     _pBeforeLaserData = _pCurrentLaserData;
     _CurrentBuffer = rvLasers;
     _pCurrentLaserData = rvLasers.back().front();
@@ -173,9 +179,7 @@ bool CJPDATracker::PrepareTracking(const LaserDataBuffer &rvLasers) {
     }
     _pInitializer->SetUpdateBackGround(_CurrentConfig._bUpdateGrid);
   }
-
   _CurrentFilterData._pLaserData = _pCurrentLaserData;
-
   return true;
 }
 
@@ -197,8 +201,6 @@ void CJPDATracker::ExtractMovingPoints() {
   if (_bRemoveChuukanten) {
     const auto &rvRawData = _pCurrentLaserData->GetRawData();
     vector<int> vnFound;
-//    vector<int> vnFound2;
-
     double _dDistThrMax = _CurrentConfig._dRemoveIntervalDistThrMax;
     double _dDistThrMin = _CurrentConfig._dRemoveIntervalDistThrMin;
     double _dDistMulti = _CurrentConfig._dRemoveIntervalDistMulti;
@@ -630,184 +632,6 @@ void CJPDATracker::InitializeNewObjects() {
   }
 
 }
-
-
-
-/*
-void CJPDATracker::InitializeNewObjects() {
-
-  try {
-
-    mmtimer mt;
-    vector<double> vTimes;
-    for (size_t i=0; i<10; ++i) vTimes.push_back(0);
-    int n=0;
-    for (auto it=_vClusterGroup.begin(); it!=_vClusterGroup.end(); ++it, ++n) {
-      string sErrorMsg;
-      int nt=0;
-      mt.restart();
-
-      vector<boost::shared_ptr<SPointCluster>> vClusters;
-      for (auto it2=it->begin(); it2 != it->end(); ++it2) {
-        vClusters.push_back(_vExtractedClusters[*it2]);
-      }
-
-      SNewTrackProperty Prop;
-
-      Prop.vSVMVector.push_back(it->size()); //segnum
-      double dTotalLen = 0;
-      for (size_t i=0; i< vClusters.size(); ++i) {
-        dTotalLen += vClusters[i]->_dTotalLen;
-      }
-      Prop.vSVMVector.push_back(dTotalLen); //seglen total
-      if (true) {
-        Prop.vSVMVector.push_back(0); //temp vel;
-        Prop.vSVMVector.push_back(Deg2Rad(22.5)); //temp veloffset;
-      }
-      else {
-        Prop.vSVMVector.push_back(3000); //temp vel;
-        Prop.vSVMVector.push_back(Deg2Rad(0)); //temp veloffset;
-      }
-
-      vTimes[nt++] += mt.elapsed(); mt.restart(); //0
-
-
-      for (size_t i=0; i< vClusters.size(); ++i) {
-        Prop.dWidthTotal += vClusters[i]->_dWidthFromLRF;
-        int nPointNum = (vClusters[i]->_PointIDRange.upper()-vClusters[i]->_PointIDRange.lower()+1);
-        Prop.dAveDist += vClusters[i]->_dAveDist * nPointNum;
-        Prop.nPointNumTotal += nPointNum;
-      }
-      auto v1 = _pCurrentLaserData->GetPoints().at(vClusters.front()->_PointIDRange.lower());
-      auto v2 = _pCurrentLaserData->GetPoints().at(vClusters.back()->_PointIDRange.upper());
-      auto vd = v1->GetLocalVec()-v2->GetLocalVec();
-      Prop.dDistBetweenEdge = FastMath::fast_hypot(vd(0), vd(1));
-      Prop.dAveDist /= Prop.nPointNumTotal;
-
-      //基本的に小さいものを省くだけなので，自動車でもtrueを返す
-      if (!TestNewPersonTrack(vClusters, Prop, sErrorMsg)) {
-        WriteEventLog("Init Failed (Person): TestNewTrack failure" ,sErrorMsg);
-        continue;
-      }
-      vTimes[nt++] += mt.elapsed(); mt.restart(); //1
-
-      SBBInfo Info;
-      CalcBB(vClusters, Info, 0.1);
-      vTimes[nt++] += mt.elapsed(); mt.restart(); //2
-
-      Prop.vSVMVector.push_back(Info.dLLen);
-      Prop.vSVMVector.push_back(Info.dSLen);
-      Prop.vSVMVector.push_back(Info.dResidual);
-
-      vTimes[nt++] += mt.elapsed(); mt.restart(); //3
-      vector<double> vOneStepProb;
-      _pSVM->Predict(Prop.vSVMVector, &vOneStepProb);
-
-      vTimes[nt++] += mt.elapsed(); mt.restart(); //4
-
-      int nMax = std::max_element(vOneStepProb.begin(),vOneStepProb.end()) - vOneStepProb.begin();
-      ostringstream oss;
-      oss << "cls #" << n << " Max=" << nMax;
-      oss << " SVM: " ;
-      for (size_t i=0; i<Prop.vSVMVector.size(); ++i) {
-        oss << Prop.vSVMVector[i] << " ";
-      }
-      oss << " Other: "  << Prop.dWidthTotal << " " << Prop.dDistBetweenEdge;     
-
-      if ( (_CurrentConfig._dInitDistanceThr > 0) && (_CurrentConfig._dInitDistanceThr < Prop.dAveDist)) {
-        WriteEventLog("Init Failed : Too Far" , oss.str());
-        continue;
-      }
-      vTimes[nt++] += mt.elapsed(); mt.restart(); //5
-
-       
-      //vector<boost::shared_ptr<SPointCluster>> vClusters; これを入力にするクラスを作る
-      //ここから TestNewCar/Personを移植それ以外残す
-      if (_CurrentConfig._bPerformCarTrack && TestNewCarTrack(vClusters, Prop, sErrorMsg)) {
-
-        auto pFilter2 = new CJPDARectangleFilter(_nParticleNum);
-        vector<int> vIDs;
-        for (size_t i=0; i<vClusters.size(); ++i) {
-          for (int n=vClusters[i]->_PointIDRange.lower(); n<=vClusters[i]->_PointIDRange.upper(); ++n) {
-            vIDs.push_back(n);
-          }
-        }
-        std::sort(vIDs.begin(), vIDs.end());
-        pFilter2->ResetParticles(_CurrentFilterData, vIDs, Info);
-        pFilter2->SetSplittable(true);
-        boost::shared_ptr<CJPDAFilter> pFilter(pFilter2);
-
-        if (CheckCollision(pFilter, sErrorMsg)) {
-          WriteEventLog("Init Failed (Car): CheckCollision Failed" , sErrorMsg);
-        }
-        else {
-          ostringstream oss1; oss1 << "Init OK Car #" << pFilter->GetPFID();
-          WriteEventLog(oss1.str() , oss.str());
-          _vpFilters.push_back(pFilter);
-        }
-      }
-      else {
-        if (_CurrentConfig._bPerformCarTrack) WriteEventLog("Init Failed (Car): TestNewTrack failure", sErrorMsg);
-        bool bPersonOK = TestNewPersonTrack(vClusters, Prop, sErrorMsg);
-        vTimes[nt++] += mt.elapsed(); mt.restart(); //6
-
-        if (bPersonOK) {
-          boost::shared_ptr<CJPDAEllipseFilter> pFilter(new CJPDAEllipseFilter(_nParticleNum));
-          vTimes[nt++] += mt.elapsed(); mt.restart(); //7
-          vector<int> vIDs;
-          for (size_t i=0; i<vClusters.size(); ++i) {
-            for (int n=vClusters[i]->_PointIDRange.lower(); n<=vClusters[i]->_PointIDRange.upper(); ++n) {
-              vIDs.push_back(n);
-            }
-          }
-          std::sort(vIDs.begin(), vIDs.end());
-          pFilter->ResetParticles(_CurrentFilterData, vIDs);
-          vTimes[nt++] += mt.elapsed(); mt.restart(); //8
-          if (_bUseJIPDA) {
-            pFilter->SetExistanceRate(vOneStepProb[2]);
-          }
-
-          if (CheckCollision(pFilter, sErrorMsg)) {
-            WriteEventLog("Init Failed (Person): CheckCollision Failed" , sErrorMsg);
-          }
-          else {
-            ostringstream oss1; oss1 << "Init OK Person #" << pFilter->GetPFID();
-            WriteEventLog(oss1.str() , oss.str());
-            if (_CurrentConfig._bSetPersonSplittable) {
-              pFilter->SetSplittable(true);
-            }
-            pFilter->SetSizeValues(_CurrentConfig._dPersonR1Ave, _CurrentConfig._dPersonR1StdDev, 
-              _CurrentConfig._dPersonR1Max, _CurrentConfig._dPersonR1Min, 
-              _CurrentConfig._dPersonR2Ave, _CurrentConfig._dPersonR2StdDev, 
-              _CurrentConfig._dPersonR2Max, _CurrentConfig._dPersonR2Min);
-            pFilter->SetNoiseValues(_CurrentConfig._dPersonXN, _CurrentConfig._dPersonRadN, 
-              _CurrentConfig._dPersonVN1, _CurrentConfig._dPersonRVN1, 
-              _CurrentConfig._dPersonVN2, _CurrentConfig._dPersonRVN2, 
-              _CurrentConfig._dPersonLowVelThr, _CurrentConfig._dPersonRVNLowVel);
-            pFilter->SetLikelihoodFunctionParams(_CurrentConfig._dPersonSigma, 
-              _CurrentConfig._dPersonOtherMOLenAve, _CurrentConfig._dPersonOtherMOLenStdDev, 
-              _CurrentConfig._dPersonFPExistLen, _CurrentConfig._dPersonFPNearProb, 
-              _CurrentConfig._dPersonPassProbTotal);
-
-
-            _vpFilters.push_back(pFilter);
-          }
-          vTimes[nt++] += mt.elapsed(); mt.restart(); //9
-        }
-        else {
-          WriteEventLog("Init Failed (Person): TestNewTrack failure" ,sErrorMsg);
-        }
-      }
-    }
-  }
-  catch (std::exception &e) {
-    cout << "initialize error: " << e.what() << endl;
-  }
-
-}
-
-*/
-
 
 void CJPDATracker::PredictPF() {
 
@@ -2479,25 +2303,20 @@ boost::shared_ptr<const STrackerResult> CJPDATracker::Proc(const LaserDataBuffer
   pResult->_Config = _CurrentConfig;
 
   try {
-
     if (rvLasers.empty() || rvLasers.back().empty()) {
       ostringstream oss;
       oss << __FUNCTION__ << "buffer empty" << endl;
       throw std::logic_error(oss.str());
     }
-
-
     //step0 最初に必要な処理 _pCurrentLaserData:最新のLRFデータ，_pBeforeLaserData:前フレームのLRFデータ
     bool bUpdated = PrepareTracking(rvLasers);
     if (!bUpdated) {
       ++_nCurrentFrame;
       return boost::shared_ptr<const STrackerResult>();
     }
-
     _dCurrentTime = _pCurrentLaserData->GetTime();
     pResult->_nFrame = _nCurrentFrame;
     pResult->_dCurrentTime = _pCurrentLaserData->GetTime();
-
     if (_CurrentConfig._bShowDebugString) {
       ccout->SetColor(ColorCout::eGreen);
       ccout << endl;
@@ -2507,54 +2326,46 @@ boost::shared_ptr<const STrackerResult> CJPDATracker::Proc(const LaserDataBuffer
       ccout << oss.str() << endl;
       ccout << "Process Start" << endl;
     }
-
-    try {
-      //step1 候補領域の抽出 _vExtractedIDs, _vExtractedPointsに結果格納
-      ExtractMovingPoints();
+    //step1 候補領域の抽出 _vExtractedIDs, _vExtractedPointsに結果格納
+    ExtractMovingPoints();
 #ifdef MEASURE_TIME
-      vdTimes.push_back(mt.elapsed()); mt.restart(); vsDesc.push_back("Extract");
+    vdTimes.push_back(mt.elapsed()); mt.restart(); vsDesc.push_back("Extract");
 #endif
-      if (_bPerformTracking && (_CurrentConfig._nNoProcFrame < _nCurrentFrame)) {
-        //step2 PFをPredict
-        PredictPF();
+    if (_bPerformTracking && (_CurrentConfig._nNoProcFrame < _nCurrentFrame)) {
+      //step2 PFをPredict
+      PredictPF();
 #ifdef MEASURE_TIME
-        vdTimes.push_back(mt.elapsed()); mt.restart(); vsDesc.push_back("Predict");
+      vdTimes.push_back(mt.elapsed()); mt.restart(); vsDesc.push_back("Predict");
 #endif
-        //step3 仮説生成＆PFをUpdate
-        SolveJPDA();
+      //step3 仮説生成＆PFをUpdate
+      SolveJPDA();
 #ifdef MEASURE_TIME
-        vdTimes.push_back(mt.elapsed()); mt.restart(); vsDesc.push_back("Hypo");
+      vdTimes.push_back(mt.elapsed()); mt.restart(); vsDesc.push_back("Hypo");
 #endif
-        //step4 追跡終了したPFを消去
-        RemoveTerminatedPF();
+      //step4 追跡終了したPFを消去
+      RemoveTerminatedPF();
 #ifdef MEASURE_TIME
-        vdTimes.push_back(mt.elapsed()); mt.restart(); vsDesc.push_back("Remove");
+      vdTimes.push_back(mt.elapsed()); mt.restart(); vsDesc.push_back("Remove");
 #endif
-        //step5 候補領域をクラスタリング _vExtractedClustersに結果格納
-        MakeCluster();
+      //step5 候補領域をクラスタリング _vExtractedClustersに結果格納
+      MakeCluster();
 #ifdef MEASURE_TIME
-        vdTimes.push_back(mt.elapsed()); mt.restart(); vsDesc.push_back("MkCluster");
+      vdTimes.push_back(mt.elapsed()); mt.restart(); vsDesc.push_back("MkCluster");
 #endif
-        //step6 移動体の候補初期化
-        InitializeNewObjects();
+      //step6 移動体の候補初期化
+      InitializeNewObjects();
 #ifdef MEASURE_TIME
-        vdTimes.push_back(mt.elapsed()); mt.restart(); vsDesc.push_back("InitNew");
+      vdTimes.push_back(mt.elapsed()); mt.restart(); vsDesc.push_back("InitNew");
 #endif
-        /*
-        if (_pSVMDataProcessing) {
-          _pSVMDataProcessing->SetLRFData(_pCurrentLaserData, _vPointStatus);
-          _pSVMDataProcessing->SavePFData(_vpFilters);
-          for (size_t k=0; k<_vGroup.size(); ++k) {
-            _pSVMDataProcessing->SaveGroupData(_vGroup[k]->GetFilters(), _vGroup[k]->GetGroupRangeOrg().lower(), _vGroup[k]->GetGroupRangeOrg().upper());
-          }
+      /*
+      if (_pSVMDataProcessing) {
+        _pSVMDataProcessing->SetLRFData(_pCurrentLaserData, _vPointStatus);
+        _pSVMDataProcessing->SavePFData(_vpFilters);
+        for (size_t k=0; k<_vGroup.size(); ++k) {
+          _pSVMDataProcessing->SaveGroupData(_vGroup[k]->GetFilters(), _vGroup[k]->GetGroupRangeOrg().lower(), _vGroup[k]->GetGroupRangeOrg().upper());
         }
-          */
       }
-    }
-    catch (std::exception &e) {
-      cout << "Proc Exception: " << e.what() << endl;
-      WriteEventLog("Tracker Exception", e.what());
-      ResetAll();
+        */
     }
     pResult->_vExtractedPoints = _vExtractedPoints;
     pResult->_vExtractedClusters = _vExtractedClusters;
@@ -2562,7 +2373,6 @@ boost::shared_ptr<const STrackerResult> CJPDATracker::Proc(const LaserDataBuffer
     pResult->_vTempPFResults.clear();
     pResult->_vPointStatus = _vPointStatus;
     for (auto it=_vpFilters.begin(); it!=_vpFilters.end(); ++it) {
-
       string sType = "";
       if (dynamic_cast<CJPDAEllipseFilter*>(it->get())) {
         sType = "ellipsecylinder";
@@ -2573,8 +2383,6 @@ boost::shared_ptr<const STrackerResult> CJPDATracker::Proc(const LaserDataBuffer
       else {
         sType = "cylinder";
       }
-
-
       boost::shared_ptr<SPFStatus> pPFResult(new SPFStatus);
       pPFResult->_vAverage = (*it)->GetResult();
       pPFResult->_vParticles = (*it)->GetParticles(true);
@@ -2584,9 +2392,7 @@ boost::shared_ptr<const STrackerResult> CJPDATracker::Proc(const LaserDataBuffer
       pPFResult->_nClusterID = (*it)->GetPFID();
 //      pPFResult->_AngleRange = (*it)->GetAngleRange();
       pPFResult->_sType = sType;
-      pResult->_vTempPFResults.push_back(pPFResult);
-
-      
+      pResult->_vTempPFResults.push_back(pPFResult);      
       int nID = (*it)->GetPFID();
       boost::shared_ptr<CMovingObject> pMO;
       if (_pCurrentResult) {
@@ -2680,8 +2486,10 @@ boost::shared_ptr<const STrackerResult> CJPDATracker::Proc(const LaserDataBuffer
     ccout->SetColor(ColorCout::eRed);
     ccout << "Proc Exception: " << e.what() << endl;
     WriteEventLog("Tracker Exception", e.what());
+    if (_bCriticalError) {
+      WriteEventLog("Critical Error", "");
+    }
   }
-
 
   ++_nCurrentFrame;
   _pCurrentResult = boost::shared_ptr<const STrackerResult>(pResult);

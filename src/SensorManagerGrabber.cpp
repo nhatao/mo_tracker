@@ -77,9 +77,11 @@ void CSensorManagerGrabber::Initialize(const STrackerConfig &Config) {
       auto pOdm = boost::shared_ptr<CNHSensorFromFile<CIPRobotStatus> >(new CNHSensorFromFile<CIPRobotStatus>("Odometry"));
       pOdm->SetFile(_CurrentConfig._sOdmFileName, 10);
       _nOdmID = (int)_pManager->AddSensor(pOdm, 1000, false);
-      cout << "odm file: " << _CurrentConfig._sOdmFileName << endl;
+      cout << "Odometry file: " << _CurrentConfig._sOdmFileName << endl;
     }
-    else cout << "no odm" << endl;
+    else {
+      cout << "No Odometry file."<< endl;
+    }
     _bLogMode = true;
   }
   else if (_CurrentConfig._nMode == 1) {

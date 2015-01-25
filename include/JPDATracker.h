@@ -301,11 +301,8 @@ protected:
   double _dRemoveDisparsionThr;
 
   bool _bPredictMT;
-
-//  boost::shared_ptr<CSVMDataProcessing> _pSVMDataProcessing;
-
   double _dMinClusterDivideThr;
-
+//  boost::shared_ptr<CSVMDataProcessing> _pSVMDataProcessing;
 };
 
 

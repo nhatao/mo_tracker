@@ -64,6 +64,7 @@ protected:
   boost::shared_ptr<boost::promise<CTrackerResult>> _pPromise;
   CTrackerHistory _History;
 
+  volatile bool _bCriticalError;
 };
 
 class CLRFGrabber {

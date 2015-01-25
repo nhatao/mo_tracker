@@ -5,10 +5,9 @@
 using namespace std;
 
 CMOTracker::CMOTracker() {
-
   _bWaitViewer = false;
+  _bCriticalError = false;
 }
-
 
 CMOTracker::~CMOTracker() {
   FinishThread();
@@ -70,6 +69,10 @@ void CMOTracker::Tick() {
 }
 
 void CMOTracker::GetLatestResults(CTrackerHistory &rResults) {
+
+  if (_bCriticalError) {
+    throw std::logic_error("Critical Error ocurred in tracker");
+  }
 
   boost::recursive_mutex::scoped_lock lk(_DataWaitMutex);
   rResults = _History;

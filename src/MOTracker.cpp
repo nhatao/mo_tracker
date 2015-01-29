@@ -1,4 +1,5 @@
 ﻿#include "StdAfx_MOTracking.h"
+#include <boost/filesystem.hpp>
 #include "MOTracker.h"
 #include "ColorCout.h"
 
@@ -15,8 +16,7 @@ CMOTracker::~CMOTracker() {
 
 void CMOTracker::FinishThread() {
 
-  if (_pThr) {
-
+  if (_pMainThread) {
     _bRunTrackerLoop = false;
     {
       boost::recursive_mutex::scoped_lock lk(_DataWaitMutex);
@@ -26,24 +26,20 @@ void CMOTracker::FinishThread() {
       boost::recursive_mutex::scoped_lock lk(_ViewerWaitMutex);
       try {
         _ViewerWaitCondition.notify_all();
-        if (_pPromise) {
-          _pPromise->set_value(_LatestResult);
-        }
       }
       catch (...){
       }
     }
-    _pThr->join();
-    _pThr.reset();
+    _pMainThread->join();
+    _pMainThread.reset();
   }
-
 }
 
 void CMOTracker::RunThread(boost::shared_ptr<CLRFGrabber> pGrabber) {
 
   _pGrabber = pGrabber;
   _bRunTrackerLoop = true;
-  _pThr.reset(new boost::thread( boost::ref(*this) ));
+  _pMainThread.reset(new boost::thread( boost::ref(*this) ));
 }
 
 void CMOTracker::GetLatestResult(CTrackerResult &rResult) const  {
@@ -83,20 +79,17 @@ void CMOTracker::operator()() {
 #ifdef _MSC_VER
     HANDLE hThread = GetCurrentThread();
     if (!SetThreadPriority(hThread, THREAD_PRIORITY_TIME_CRITICAL)) {
-      cout << __FUNCTION__  << " Priority Set NG" << endl;
+      cout << __FUNCTION__  << " Priority Set Failed" << endl;
     }
 #endif
 
   int _nFrame2 = 0;
   mmtimer mt;
   double _dLastTime = 0;
-
   while (_bRunTrackerLoop) {
-
     LaserDataBuffer Buffer;
     _pGrabber->GetResultBuffer(Buffer);
     if (!Buffer.empty()) {
-
       ccout->SetColor(ColorCout::eGreen);
       boost::shared_ptr<const STrackerResult> pCurRes = Proc(Buffer);
       if (pCurRes) {
@@ -120,13 +113,8 @@ void CMOTracker::operator()() {
             }
           }
           if (!_bRunTrackerLoop) break;
-
-//          _pPromise->set_value(_LatestResult);
-
           Notify("TrackerUpdated");
-  //        cout << "Frame: " << pCurRes->_nFrame << " ObjNum:" << pCurRes->_vpObjects.size() << endl;
           ++_nFrame2;
-
           if (_nFrame2 % 100 == 0) {
             cout << "TrackerThread FPS: " << _nFrame2/mt.elapsed() << endl;
           }
@@ -138,48 +126,34 @@ void CMOTracker::operator()() {
         Notify("TrackerUpdatedFailed");
         Sleep(1);
       }
-
     }
     else {
       //no data
       Sleep(1);
     }
   }
-
 }
-
 
 void CLRFGrabber::GetResultBuffer(LaserDataBuffer &Buffer) {
   boost::mutex::scoped_lock lk(_BufferMutex);
   Buffer = _Buffer;
   _Buffer.clear();
-
-
 }
-
-#include <boost/filesystem.hpp>
 
 void CLRFGrabber::SetLatestResult(std::vector<boost::shared_ptr<const CLaserData> > &rvLaserData) {
 
   boost::mutex::scoped_lock lk(_BufferMutex);
   _Buffer.push_back(rvLaserData);
-
-
   if (rvLaserData.empty()) return;
 
   if (_sLogDir != "") {
-//    const auto &rP = rvLaserData[0]->GetCo()->GetParent();
     const auto &rP = rvLaserData[0]->GetCo();
-//    cout << "odm: " << rvLaserData[0]->GetCo()->GetStr() << endl;
-//    cout << "parent: " << rvLaserData[0]->GetCo()->GetParent()->GetStr() << endl;
     (*_pOdmFile) << std::fixed << setprecision(2);
     (*_pOdmFile) << rP->GetX() << " " << rP->GetY() << " ";
     (*_pOdmFile) << std::fixed << setprecision(6);
     (*_pOdmFile) << rP->GetYaw() << " ";
     (*_pOdmFile) << "0 0 0 0 ";
     (*_pOdmFile) << rvLaserData[0]->GetTime() << endl;
-
-
     if (rvLaserData.size() > _vpLRFFiles.size()) {
       for (size_t j=_vpLRFFiles.size(); j<rvLaserData.size(); ++j) {
         ostringstream oss; 
@@ -191,13 +165,11 @@ void CLRFGrabber::SetLatestResult(std::vector<boost::shared_ptr<const CLaserData
     for (size_t i=0; i<rvLaserData.size(); ++i) {
       const auto & pLaser = rvLaserData[i];
       auto &pFile = _vpLRFFiles[i];
-
       for (auto it=pLaser->GetRawData().begin(); it!=pLaser->GetRawData().end(); ++it) {
         (*pFile) << (int)(*it) << " ";
       }
       (*pFile) << std::fixed << setprecision(6);
       (*pFile) << pLaser->GetTime() << endl;
-
     }
   }
 }
@@ -218,16 +190,13 @@ void CLRFGrabber::SetLogDir(const std::string &rsLogDir) {
     }
     boost::filesystem::path pOdm = OurDir/"odm.dat";
     _pOdmFile.reset(new mt_ofstream(pOdm.string().c_str()));
-    boost::filesystem::path pLRF0 = OurDir/"lrf0.dat";
+    boost::filesystem::path pLRF0 = OurDir/"lrf0.dat"; //at least one LRF
     _vpLRFFiles.push_back(boost::shared_ptr<mt_ofstream>(new mt_ofstream(pLRF0.string().c_str())));
-
   }
 }
 
 CLRFGrabber::~CLRFGrabber () {
-  cout << "LRFGrabber destructed!" << endl;
   boost::mutex::scoped_lock lk(_BufferMutex);
   _pOdmFile.reset();
   _vpLRFFiles.clear();
-
 }

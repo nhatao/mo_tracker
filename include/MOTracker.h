@@ -59,9 +59,8 @@ protected:
   boost::condition_variable_any  _ViewerWaitCondition;
 
   volatile bool _bRunTrackerLoop;
-  boost::shared_ptr<boost::thread> _pThr;
+  boost::shared_ptr<boost::thread> _pMainThread;
   boost::shared_ptr<CLRFGrabber> _pGrabber;
-  boost::shared_ptr<boost::promise<CTrackerResult>> _pPromise;
   CTrackerHistory _History;
 
   volatile bool _bCriticalError;

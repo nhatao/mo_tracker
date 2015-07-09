@@ -3,7 +3,7 @@
 #include "LRFSensor.h"
 #include "PolygonalRegion.h"
 #include "ColorCout.h"
-#include "MOtracker.h"
+#include "MOTracker.h"
 class CTrackInitialization
 {
 public:
